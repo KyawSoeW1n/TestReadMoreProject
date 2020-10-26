@@ -5,11 +5,23 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
 import android.content.Context
+import android.graphics.Color
 import android.os.Build
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.TextPaint
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.text.style.ForegroundColorSpan
 import android.util.AttributeSet
+import android.util.Log
+import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver.OnGlobalLayoutListener
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.TextView
+import androidx.annotation.Nullable
+import androidx.appcompat.widget.AppCompatTextView
 
 
 /**
@@ -37,7 +49,7 @@ class ExpandableTextView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyle: Int = 0
 ) :
-    TextView(context, attrs, defStyle) {
+    AppCompatTextView(context, attrs, defStyle) {
     /**
      * Returns the [OnExpandListener].
      * @return the listener.
@@ -46,7 +58,7 @@ class ExpandableTextView @JvmOverloads constructor(
      * Sets a listener which receives updates about this [ExpandableTextView].
      * @param onExpandListener the listener.
      */
-    var onExpandListener: OnExpandListener? = null
+    private var onExpandListener: OnExpandListener? = null
     /**
      * Returns the current [TimeInterpolator] for expanding.
      * @return the current interpolator, null by default.
@@ -55,7 +67,7 @@ class ExpandableTextView @JvmOverloads constructor(
      * Sets a [TimeInterpolator] for expanding.
      * @param expandInterpolator the interpolator
      */
-    var expandInterpolator: TimeInterpolator
+    private var expandInterpolator: TimeInterpolator
     /**
      * Returns the current [TimeInterpolator] for collapsing.
      * @return the current interpolator, null by default.
@@ -64,10 +76,16 @@ class ExpandableTextView @JvmOverloads constructor(
      * Sets a [TimeInterpolator] for collpasing.
      * @param collapseInterpolator the interpolator
      */
-    var collapseInterpolator: TimeInterpolator
+    private var collapseInterpolator: TimeInterpolator
     private var maxLines: Int
     private var animationDuration: Long
     private var animating = false
+    private val showMore = "Show More"
+    private val showLess = "Show less"
+    private val dotdot = "..."
+    private val showMoreTextColor = Color.RED
+    private val showLessTextColor = Color.RED
+    private val TAG = ExpandableTextView::class.java.name
 
     /**
      * Is this [ExpandableTextView] expanded or not?
@@ -76,6 +94,8 @@ class ExpandableTextView @JvmOverloads constructor(
     var isExpanded = false
         private set
     private var collapsedHeight = 0
+
+    private var bufferType: BufferType? = null
     override fun getMaxLines(): Int {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             super.getMaxLines()
@@ -188,7 +208,6 @@ class ExpandableTextView @JvmOverloads constructor(
             valueAnimator.addUpdateListener { animation ->
                 var layoutParams = this@ExpandableTextView.layoutParams
                 layoutParams.height = animation.animatedValue as Int
-                layoutParams = layoutParams
             }
             valueAnimator.addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
@@ -199,7 +218,6 @@ class ExpandableTextView @JvmOverloads constructor(
                     // the height calculated with this ValueAnimator isn't correct anymore
                     var layoutParams = this@ExpandableTextView.layoutParams
                     layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
-                    layoutParams = layoutParams
 
                     // keep track of current status
                     isExpanded = false
@@ -273,5 +291,125 @@ class ExpandableTextView @JvmOverloads constructor(
         // create default interpolators
         expandInterpolator = AccelerateDecelerateInterpolator()
         collapseInterpolator = AccelerateDecelerateInterpolator()
+//        setText()
+        addShowMore()
     }
+
+//    private fun setText() {
+//        super.setText(getDisplayableText(), bufferType)
+//        movementMethod = LinkMovementMethod.getInstance()
+//        highlightColor = Color.TRANSPARENT
+//    }
+
+//    private fun getDisplayableText(): CharSequence? {
+//        return getTrimmedText(text)
+//    }
+//
+//    override fun setText(text: CharSequence?, type: BufferType) {
+//        this.text = text
+//        bufferType = type
+//        setText()
+//    }
+//
+//    private fun getTrimmedText(text: CharSequence?): CharSequence? {
+//        if (text != null && lineEndIndex > 0) {
+//            if (readMore) {
+//                if (layout.lineCount > trimLines) {
+//                    return updateCollapsedText()
+//                }
+//            } else {
+//                return updateExpandedText()
+//            }
+//        }
+//        return text
+//    }
+
+    private fun addShowMore() {
+        val vto = viewTreeObserver
+        vto.addOnGlobalLayoutListener(object : OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                val text = text.toString()
+//                if (!isAlreadySet) {
+//                    mainText = getText().toString()
+//                    isAlreadySet = true
+//                }
+                var showingText = ""
+                if (maxLines >= lineCount) {
+                    try {
+                        throw java.lang.Exception("Line Number cannot be exceed total line count")
+                    } catch (e: java.lang.Exception) {
+                        e.printStackTrace()
+                        Log.e(TAG, "Error: " + e.message)
+                    }
+                    viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    return
+                }
+                var start = 0
+                var end: Int
+                var newText = ""
+                for (i in 0 until maxLines) {
+                    end = layout.getLineEnd(i)
+                    showingText += text.substring(start, end)
+                    start = end
+                }
+                Log.e(TAG, "Text1: $showingText")
+                Log.e(TAG, "Text1: " + showingText.length)
+                Log.e(TAG, "Text2: " + dotdot.length)
+                Log.e(TAG, "Text2: " + showMore.length)
+                if (showingText.length - (dotdot.length + showMore.length) <= 0) {
+//                        removeLastIndex(showingText);
+                    Log.e(TAG, "Text10: $showingText")
+                    newText = removeLastIndex(showingText)
+                    Log.e(TAG, "Text5: $newText")
+                } else {
+                    newText = showingText.substring(
+                        0,
+                        showingText.length - (dotdot.length + showMore.length * 2)
+                    )
+                    Log.e(TAG, "Text6: $newText")
+                }
+
+//                    newText = showingText.substring(0, showingText.length() - (dotdot.length() + showMore.length()));
+                Log.d(TAG, "Text N: $newText")
+                Log.d(TAG, "Text S: $showingText")
+                newText += dotdot + showMore
+                setText(newText)
+            }
+//            setShowMoreColoringAndClickable()
+//            viewTreeObserver.removeOnGlobalLayoutListener(this)
+        })
+    }
+
+    fun removeLastIndex(paramValue: String): String {
+        var str = paramValue
+        if (str.isNotEmpty() && str[str.length - 1] == '\n') {
+            str = str.substring(0, str.length - 1)
+        }
+        return str
+    }
+
+//    private fun setShowMoreColoringAndClickable() {
+//        val spannableString = SpannableString(text)
+//        Log.d(TAG, "Text: F\t$text")
+//        spannableString.setSpan(
+//            object : ClickableSpan() {
+//                override fun updateDrawState(ds: TextPaint) {
+//                    ds.isUnderlineText = false
+//                }
+//
+//                override fun onClick(@Nullable view: View) {
+//
+//                }
+//            },
+//            text.length - (dotdot.length + showMore.length),
+//            text.length, 0
+//        )
+//        spannableString.setSpan(
+//            ForegroundColorSpan(showMoreTextColor),
+//            text.length - (dotdot.length + showMore.length),
+//            text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+//        )
+//        movementMethod = LinkMovementMethod.getInstance()
+//        setText(spannableString, BufferType.SPANNABLE)
+//    }
 }
