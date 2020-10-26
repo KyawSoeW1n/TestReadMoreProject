@@ -2,6 +2,7 @@ package com.example.testreadmoreproject
 
 import android.content.Context
 import android.graphics.Color
+import android.os.Parcelable
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.TextPaint
@@ -12,33 +13,64 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import android.view.ViewTreeObserver.OnGlobalLayoutListener
+import android.widget.TextView
 import androidx.annotation.Nullable
 import androidx.appcompat.widget.AppCompatTextView
 
+
+/*
+ *  ****************************************************************************
+ *  * Created by : Md Tariqul Islam on 3/6/2019 at 1:17 PM.
+ *  * Email :
+ *  *
+ *  * Purpose:
+ *  *
+ *  * Last edited by : Md Tariqul Islam on 3/6/2019.
+ *  *
+ *  * Last Reviewed by : <Reviewer Name> on <mm/dd/yy>
+ *  ****************************************************************************
+ */
+
+
+/*
+ *  ****************************************************************************
+ *  * Created by : Md Tariqul Islam on 3/6/2019 at 1:17 PM.
+ *  * Email :
+ *  *
+ *  * Purpose:
+ *  *
+ *  * Last edited by : Md Tariqul Islam on 3/6/2019.
+ *  *
+ *  * Last Reviewed by : <Reviewer Name> on <mm/dd/yy>
+ *  ****************************************************************************
+ */
 class ShowMoreTextView : AppCompatTextView {
     private var showingLine = 1
     private var showingChar = 0
     private var isCharEnable = false
-    private var isClickEnable = false
-    private var showMore = "Show more"
+    private var showMore = "Show More"
     private var showLess = "Show less"
-    private val ellipse = "..."
-    private val magicNumber = 5
-    private var isExpanded = true
-    private lateinit var onClickSeeMore: OnClickSeeMore
-
-    private var showMoreTextColor = Color.BLACK
-    private var showLessTextColor = Color.BLACK
+    private val dotdot = "..."
+    private var showMoreTextColor = Color.RED
+    private var showLessTextColor = Color.RED
     private var mainText: String? = null
     private var isAlreadySet = false
+    private var isCollapse = true
 
     constructor(context: Context) : super(context)
-
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
 
     override fun onFinishInflate() {
         super.onFinishInflate()
         mainText = text.toString()
+    }
+
+    override fun onSaveInstanceState(): Parcelable? {
+        return super.onSaveInstanceState()
+    }
+
+    override fun onRestoreInstanceState(state: Parcelable) {
+        super.onRestoreInstanceState(state)
     }
 
     private fun addShowMore() {
@@ -60,10 +92,10 @@ class ShowMoreTextView : AppCompatTextView {
                         }
                     }
                     var newText = text.substring(0, showingChar)
-                    newText += ellipse + showMore
-                    isExpanded = true
+                    newText += dotdot + showMore
+                    isCollapse = true
                     setText(newText)
-                    Log.e("Text", newText)
+                    Log.d(TAG, "Text: $newText")
                 } else {
                     if (showingLine >= lineCount) {
                         try {
@@ -77,19 +109,34 @@ class ShowMoreTextView : AppCompatTextView {
                     }
                     var start = 0
                     var end: Int
+                    var newText: String? = ""
                     for (i in 0 until showingLine) {
                         end = layout.getLineEnd(i)
                         showingText += text.substring(start, end)
                         start = end
                     }
-                    var newText = showingText.substring(
-                        0,
-                        showingText.length - (ellipse.length + showMore.length + magicNumber)
-                    )
-                    Log.e("Text", newText)
-                    Log.e("Text", showingText)
-                    newText += ellipse + showMore
-                    isExpanded = true
+                    Log.e(TAG, "Text1: $showingText")
+                    Log.e(TAG, "Text1: " + showingText.length)
+                    Log.e(TAG, "Text2: " + dotdot.length)
+                    Log.e(TAG, "Text2: " + showMore.length)
+                    if (showingText.length - (dotdot.length + showMore.length) <= 0) {
+//                        removeLastIndex(showingText);
+                        Log.e(TAG, "Text10: $showingText")
+                        newText = removeLastIndex(showingText)
+                        Log.e(TAG, "Text5: $newText")
+                    } else {
+                        newText = showingText.substring(
+                            0,
+                            showingText.length - (dotdot.length + showMore.length * 2)
+                        )
+                        Log.e(TAG, "Text6: $newText")
+                    }
+
+//                    newText = showingText.substring(0, showingText.length() - (dotdot.length() + showMore.length()));
+                    Log.d(TAG, "Text N: $newText")
+                    Log.d(TAG, "Text S: $showingText")
+                    newText += dotdot + showMore
+                    isCollapse = true
                     setText(newText)
                 }
                 setShowMoreColoringAndClickable()
@@ -98,9 +145,17 @@ class ShowMoreTextView : AppCompatTextView {
         })
     }
 
+    fun removeLastIndex(str: String?): String? {
+        var str = str
+        if (str != null && str.length > 0 && str[str.length - 1] == '\n') {
+            str = str.substring(0, str.length - 1)
+        }
+        return str
+    }
+
     private fun setShowMoreColoringAndClickable() {
         val spannableString = SpannableString(text)
-        Log.d(TAG, "Text: $text")
+        Log.d(TAG, "Text: F\t$text")
         spannableString.setSpan(
             object : ClickableSpan() {
                 override fun updateDrawState(ds: TextPaint) {
@@ -108,20 +163,19 @@ class ShowMoreTextView : AppCompatTextView {
                 }
 
                 override fun onClick(@Nullable view: View) {
-//                    maxLines = Int.MAX_VALUE
-//                    text = mainText
-//                    isExpanded = false
-//                    showLessButton()
-//                    onClickSeeMore.clickSeeMore()
-//                    Log.e("Item Clicked ", "$mainText")
+                    maxLines = Int.MAX_VALUE
+                    text = mainText
+                    isCollapse = false
+                    showLessButton()
+                    Log.d(TAG, "Item clicked: $mainText")
                 }
             },
-            text.length - (ellipse.length + showMore.length),
+            text.length - (dotdot.length + showMore.length),
             text.length, 0
         )
         spannableString.setSpan(
             ForegroundColorSpan(showMoreTextColor),
-            text.length - (ellipse.length + showMore.length),
+            text.length - (dotdot.length + showMore.length),
             text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
         )
         movementMethod = LinkMovementMethod.getInstance()
@@ -129,7 +183,7 @@ class ShowMoreTextView : AppCompatTextView {
     }
 
     private fun showLessButton() {
-        val text = text.toString() + ellipse + showLess
+        val text = text.toString() + dotdot + showLess
         val spannableString = SpannableString(text)
         spannableString.setSpan(
             object : ClickableSpan() {
@@ -140,14 +194,15 @@ class ShowMoreTextView : AppCompatTextView {
                 override fun onClick(@Nullable view: View) {
                     maxLines = showingLine
                     addShowMore()
+                    Log.d(TAG, "Item clicked: ")
                 }
             },
-            text.length - (ellipse.length + showLess.length),
+            text.length - (dotdot.length + showLess.length),
             text.length, 0
         )
         spannableString.setSpan(
             ForegroundColorSpan(showLessTextColor),
-            text.length - (ellipse.length + showLess.length),
+            text.length - (dotdot.length + showLess.length),
             text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
         )
         movementMethod = LinkMovementMethod.getInstance()
@@ -173,12 +228,9 @@ class ShowMoreTextView : AppCompatTextView {
         isCharEnable = false
         showingLine = lineNumber
         maxLines = showingLine
-        Log.e("FUCKING SHIT EXPANED", "$isExpanded")
-        if (isExpanded) {
-            Log.e("FUCKING SHIT 1", "1")
+        if (isCollapse) {
             addShowMore()
         } else {
-            Log.e("FUCKING SHIT 2", "2")
             maxLines = Int.MAX_VALUE
             showLessButton()
         }
@@ -192,15 +244,15 @@ class ShowMoreTextView : AppCompatTextView {
     fun setShowingChar(character: Int) {
         if (character == 0) {
             try {
-                throw java.lang.Exception("Character length cannot be 0")
-            } catch (e: java.lang.Exception) {
+                throw Exception("Character length cannot be 0")
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
             return
         }
         isCharEnable = true
         showingChar = character
-        if (isExpanded) {
+        if (isCollapse) {
             addShowMore()
         } else {
             maxLines = Int.MAX_VALUE
@@ -208,25 +260,43 @@ class ShowMoreTextView : AppCompatTextView {
         }
     }
 
-    fun setSeeMoreClickEnable(isClickEnable: Boolean) {
-        this.isClickEnable = isClickEnable
+    /**
+     * User can add their own  show more text
+     *
+     * @param text String
+     */
+    fun addShowMoreText(text: String) {
+        showMore = text
     }
 
-    fun setSeeMoreListener(onClickSeeMore: OnClickSeeMore) {
-        this.onClickSeeMore = onClickSeeMore
+    /**
+     * User can add their own show less text
+     *
+     * @param text String
+     */
+    fun addShowLessText(text: String) {
+        showLess = text
     }
 
-    fun setExpanded(isExpanded: Boolean) {
-        this.isExpanded = isExpanded
-        if (!this.isExpanded)
-            addShowMore()
+    /**
+     * User Can add show more text color
+     *
+     * @param color Integer
+     */
+    fun setShowMoreColor(color: Int) {
+        showMoreTextColor = color
+    }
+
+    /**
+     * User can add show less text color
+     *
+     * @param color Integer
+     */
+    fun setShowLessTextColor(color: Int) {
+        showLessTextColor = color
     }
 
     companion object {
         private val TAG = ShowMoreTextView::class.java.name
     }
-
-//    object SaveState {
-//        var isCollapse = true
-//    }
 }
